@@ -1,18 +1,15 @@
-const mysql = require('mysql');
+const mysql = require('mysql2/promise');
+require('dotenv').config();
 
-const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'macarony', // Здесь должен быть ваш пароль
-    database: 'mysql',
+const pool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'macarony',
+    database: process.env.DB_NAME || 'mysql',
+    port: process.env.DB_PORT || 3306,
+    waitForConnections: true,
+    connectionLimit: 10, // Количество соединений в пуле
+    queueLimit: 0, // Без ограничения очереди запросов
 });
 
-connection.connect(err => {
-    if (err) {
-        console.error('Error connecting to the database:', err);
-        return;
-    }
-    console.log('Connected to the MySQL server.');
-});
-
-module.exports = connection;
+module.exports = pool;

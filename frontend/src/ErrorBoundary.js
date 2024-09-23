@@ -1,4 +1,3 @@
-// src/ErrorBoundary.js
 import React, { Component } from 'react';
 
 class ErrorBoundary extends Component {
@@ -7,16 +6,19 @@ class ErrorBoundary extends Component {
         this.state = { hasError: false };
     }
 
-    static getDerivedStateFromError() {
+    static getDerivedStateFromError(error) {
+        // Обновляет состояние для перехвата ошибки
         return { hasError: true };
     }
 
-    componentDidCatch(error, info) {
-        console.error('Error captured by Error Boundary:', error, info);
+    componentDidCatch(error, errorInfo) {
+        // Вы можете логировать ошибку в системе логирования
+        console.error('Error caught by ErrorBoundary:', error, errorInfo);
     }
 
     render() {
         if (this.state.hasError) {
+            // Показывает пользовательский UI в случае ошибки
             return <h1>Something went wrong.</h1>;
         }
 

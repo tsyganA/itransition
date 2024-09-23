@@ -9,10 +9,11 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "express": "^4.17.1",
     "fullstack-project": "file:..",
     "jsonwebtoken": "^8.5.1",
-    "mysql2": "^2.2.5"
+    "mysql2": "^2.3.3"
   },
   "devDependencies": {
     "nodemon": "^2.0.12"
