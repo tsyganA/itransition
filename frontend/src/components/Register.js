@@ -10,11 +10,10 @@ const Register = ({ onClose }) => {
     const handleSubmit = async e => {
         e.preventDefault();
 
-        // Очистка сообщений об ошибках
         setError(null);
 
         try {
-            const response = await fetch('/api/register', {
+            const response = await fetch('http://localhost:3000/api/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -25,15 +24,19 @@ const Register = ({ onClose }) => {
             const data = await response.json();
 
             if (response.ok) {
+                // Сохраняем token и userId в localStorage
+                if (data.token && data.userId) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userId', data.userId);
+                }
+
                 // Если регистрация успешна, показываем сообщение об успехе
                 setSuccess(true);
                 setTimeout(onClose, 2000); // Закрыть модальное окно через 2 секунды
             } else {
-                // Если ошибка, отображаем её
                 setError(data.error || 'Something went wrong');
             }
         } catch (err) {
-            // Обработка ошибки сети или другого рода
             setError('Failed to register. Please try again.');
         }
     };

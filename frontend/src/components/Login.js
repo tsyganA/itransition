@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import { jwtDecode } from 'jwt-decode'; // Импортируем jwt-decode для работы с токеном
 
 const Login = ({ onClose, onLogin }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState(''); // Для отображения ошибок
+    const [error, setError] = useState('');
 
     const handleSubmit = async e => {
         e.preventDefault();
@@ -26,14 +27,24 @@ const Login = ({ onClose, onLogin }) => {
 
             // Проверяем наличие токена в ответе
             if (data.token) {
+                // Декодируем токен для получения userId
+                const decodedToken = jwtDecode(data.token);
+                const userId = decodedToken.userId; // Извлекаем userId из токена
+
+                console.log('Decoded Token:', decodedToken); // Для отладки
+                console.log('UserId:', userId); // Логируем userId
+
+                // Сохраняем токен и userId в localStorage
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('userId', userId);
+
                 onLogin(data.token); // Передаем токен через onLogin
                 onClose(); // Закрываем модальное окно
             } else {
                 throw new Error('Login failed. No token received.');
             }
         } catch (err) {
-            // Если что-то пошло не так, выводим сообщение об ошибке
-            setError(err.message);
+            setError(err.message); // Отображаем ошибку, если что-то пошло не так
         }
     };
 

@@ -6,51 +6,86 @@ const UsersTableWithActions = () => {
     const [users, setUsers] = useState([]);
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-    const currentUserId = localStorage.getItem('userId');
+    const [currentUserId, setCurrentUserId] = useState(null);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
 
-        if (!token) {
+        console.log('Token:', token); // Лог токена
+        console.log('UserId:', userId); // Лог userId
+
+        if (!token || !userId) {
             setError('You must be logged in to view this page.');
+            navigate('/login', { replace: true });
             return;
         }
 
-        axios
-            .get('http://localhost:3000/api/users', {
+        setCurrentUserId(userId); // Устанавливаем userId в state
+        fetchUsers(token);
+    }, [navigate]);
+
+    const fetchUsers = async token => {
+        try {
+            setLoading(true);
+            console.log('Fetching users...'); // Лог перед запросом
+
+            const response = await axios.get('http://localhost:3000/api/users', {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
-            })
-            .then(response => setUsers(response.data))
-            .catch(error => {
-                if (error.response && error.response.status === 401) {
-                    localStorage.removeItem('token');
-                    navigate('/login');
-                } else {
-                    setError(error.message);
-                }
             });
-    }, [navigate]);
 
-    const handleSelectAll = e => {
-        if (e.target.checked) {
-            setSelectedUsers(users.map(user => user.id));
-        } else {
-            setSelectedUsers([]);
+            console.log('Users fetched:', response.data); // Лог ответа сервера
+            setUsers(response.data);
+        } catch (error) {
+            console.error('Error fetching users:', error); // Лог ошибки
+            if (error.response && error.response.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('userId');
+                navigate('/login');
+            } else {
+                setError(error.message);
+            }
+        } finally {
+            console.log('Fetching finished'); // Лог завершения запроса
+            setLoading(false);
         }
     };
 
-    const handleSelectUser = id => {
-        setSelectedUsers(prevSelected => (prevSelected.includes(id) ? prevSelected.filter(userId => userId !== id) : [...prevSelected, id]));
+    const handleSelectAll = () => {
+        if (selectedUsers.length === users.length) {
+            setSelectedUsers([]); // Снять выделение
+        } else {
+            setSelectedUsers(users.map(user => user.id)); // Выделить всех
+        }
+    };
+
+    const handleSelectUser = userId => {
+        if (selectedUsers.includes(userId)) {
+            setSelectedUsers(selectedUsers.filter(id => id !== userId));
+        } else {
+            setSelectedUsers([...selectedUsers, userId]);
+        }
     };
 
     const handleSelfAction = () => {
-        alert('Вы были заблокированы или удалены. Выполните повторный вход.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('userId');
-        navigate('/login');
+        if (selectedUsers.includes(parseInt(currentUserId))) {
+            if (window.confirm('Вы собираетесь удалить или заблокировать свой собственный аккаунт. Вы уверены?')) {
+                alert('Ваш аккаунт был удалён или заблокирован. Пожалуйста, выполните повторный вход.');
+
+                // Удаляем токен и userId из localStorage
+                localStorage.removeItem('token');
+                localStorage.removeItem('userId');
+
+                // Обновляем страницу
+                window.location.reload(); // Обновление страницы
+            } else {
+                setSelectedUsers(selectedUsers.filter(id => id !== parseInt(currentUserId)));
+            }
+        }
     };
 
     const handleDeleteUsers = async () => {
@@ -62,18 +97,17 @@ const UsersTableWithActions = () => {
                 },
             });
 
-            if (selectedUsers.includes(currentUserId)) {
+            if (response.status === 200) {
                 handleSelfAction();
-            } else {
                 setUsers(users.filter(user => !selectedUsers.includes(user.id)));
                 setSelectedUsers([]);
             }
         } catch (error) {
             if (error.response && error.response.status === 401) {
                 localStorage.removeItem('token');
+                localStorage.removeItem('userId');
                 navigate('/login');
             } else {
-                console.error('Ошибка при удалении пользователей:', error);
                 setError(error.message);
             }
         }
@@ -81,14 +115,10 @@ const UsersTableWithActions = () => {
 
     const updateUsersStatus = async status => {
         const token = localStorage.getItem('token');
-
         try {
-            await axios.post(
+            const response = await axios.post(
                 'http://localhost:3000/api/users/update',
-                {
-                    userId: selectedUsers,
-                    status,
-                },
+                { userId: selectedUsers, status },
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -96,24 +126,49 @@ const UsersTableWithActions = () => {
                 }
             );
 
-            setUsers(prevUsers => prevUsers.map(user => (selectedUsers.includes(user.id) ? { ...user, status } : user)));
-            setSelectedUsers([]);
+            if (response.status === 200) {
+                handleSelfAction();
+                setUsers(prevUsers => prevUsers.map(user => (selectedUsers.includes(user.id) ? { ...user, status } : user)));
+                setSelectedUsers([]);
+            }
         } catch (error) {
-            console.error('Ошибка при обновлении статуса пользователей:', error);
-            setError(error.message);
+            if (error.response && error.response.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('userId');
+                navigate('/login');
+            } else {
+                setError(error.message);
+            }
         }
     };
 
     const handleBlock = () => {
-        updateUsersStatus('Blocked');
+        updateUsersStatus('blocked');
     };
 
     const handleUnblock = () => {
-        updateUsersStatus('Active');
+        updateUsersStatus('active');
     };
 
+    const formatDateTime = dateString => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        const datePart = date.toLocaleDateString(); // Получаем дату
+        const timePart = date.toLocaleTimeString(); // Получаем время
+        return `${datePart} ${timePart}`; // Объединяем без запятой
+    };
+
+    if (loading) {
+        return <div>Loading...</div>;
+    }
+
     if (error) {
-        return <div>Error: {error}</div>;
+        return (
+            <div className="error-message">
+                <p>Error: {error}</p>
+                <button onClick={() => setError(null)}>Dismiss</button>
+            </div>
+        );
     }
 
     return (
@@ -162,8 +217,8 @@ const UsersTableWithActions = () => {
                                 <td>{user.id}</td>
                                 <td>{user.name || 'N/A'}</td>
                                 <td>{user.email || 'N/A'}</td>
-                                <td>{user.registration_date ? new Date(user.registration_date).toLocaleDateString() : 'N/A'}</td>
-                                <td>{user.last_login ? new Date(user.last_login).toLocaleDateString() : 'N/A'}</td>
+                                <td>{formatDateTime(user.registration_date)}</td>
+                                <td>{formatDateTime(user.last_login)}</td>
                                 <td>{user.status || 'N/A'}</td>
                             </tr>
                         ))}
