@@ -1,15 +1,15 @@
-// src/components/LoginButton.js
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+// // src/components/LoginButton.js
+// import React from 'react';
+// import { useNavigate } from 'react-router-dom';
 
-const LoginButton = () => {
-    const navigate = useNavigate();
+// const LoginButton = () => {
+//     const navigate = useNavigate();
 
-    const handleClick = () => {
-        navigate('/login');
-    };
+//     const handleClick = () => {
+//         navigate('/login');
+//     };
 
-    return <button onClick={handleClick}>Login</button>;
-};
+//     return <button onClick={handleClick}>Login</button>;
+// };
 
-export default LoginButton;
+// export default LoginButton;

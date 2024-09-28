@@ -6,11 +6,18 @@ const Login = ({ onClose, onLogin }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
+    // Обработчик клика для закрытия модального окна
+    const handleBackdropClick = e => {
+        // Если клик был по самой модалке, не закрываем
+        if (e.target.classList.contains('modal')) {
+            onClose();
+        }
+    };
+
     const handleSubmit = async e => {
         e.preventDefault();
 
         try {
-            // Отправляем запрос на сервер для логина
             const response = await fetch('http://localhost:3000/api/login', {
                 method: 'POST',
                 headers: {
@@ -25,41 +32,64 @@ const Login = ({ onClose, onLogin }) => {
 
             const data = await response.json();
 
-            // Проверяем наличие токена в ответе
             if (data.token) {
-                // Декодируем токен для получения userId
                 const decodedToken = jwtDecode(data.token);
-                const userId = decodedToken.userId; // Извлекаем userId из токена
+                const userId = decodedToken.userId;
 
-                console.log('Decoded Token:', decodedToken); // Для отладки
-                console.log('UserId:', userId); // Логируем userId
+                console.log('Decoded Token:', decodedToken);
+                console.log('UserId:', userId);
 
-                // Сохраняем токен и userId в localStorage
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('userId', userId);
 
-                onLogin(data.token); // Передаем токен через onLogin
-                onClose(); // Закрываем модальное окно
+                onLogin(data.token);
+                onClose();
             } else {
                 throw new Error('Login failed. No token received.');
             }
         } catch (err) {
-            setError(err.message); // Отображаем ошибку, если что-то пошло не так
+            setError(err.message);
         }
     };
 
     return (
-        <div className="modal">
-            <div className="modal-content">
-                <h2>Login</h2>
-                {error && <p style={{ color: 'red' }}>{error}</p>} {/* Отображение ошибки */}
-                <form onSubmit={handleSubmit}>
-                    <label>Email:</label>
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-                    <label>Password:</label>
-                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-                    <button type="submit">Log In</button>
-                </form>
+        <div className="modal show d-block" tabIndex="-1" role="dialog" onClick={handleBackdropClick}>
+            <div className="modal-dialog custom-modal" role="document">
+                <div className="modal-content">
+                    <div className="modal-header">
+                        <h5 className="modal-title">Login</h5>
+                    </div>
+                    <div className="modal-body">
+                        {error && <p className="text-danger">{error}</p>} {/* Отображение ошибки */}
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label htmlFor="email">Email:</label>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    className="form-control"
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="password">Password:</label>
+                                <input
+                                    type="password"
+                                    id="password"
+                                    className="form-control"
+                                    value={password}
+                                    onChange={e => setPassword(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <button type="submit" className="btn btn-primary w-100">
+                                Log In
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 const UsersTableWithActions = () => {
     const [users, setUsers] = useState([]);
@@ -159,30 +160,32 @@ const UsersTableWithActions = () => {
     };
 
     if (loading) {
-        return <div>Loading...</div>;
+        return <div className="text-center">Loading...</div>;
     }
 
     if (error) {
         return (
-            <div className="error-message">
+            <div className="alert alert-danger" role="alert">
                 <p>Error: {error}</p>
-                <button onClick={() => setError(null)}>Dismiss</button>
+                <button className="btn btn-secondary" onClick={() => setError(null)}>
+                    Dismiss
+                </button>
             </div>
         );
     }
 
     return (
-        <div>
-            <h2>User List</h2>
+        <div className="container mt-4" style={{ maxWidth: '800px' }}>
+            <h2 class="text-center">Users List</h2>
 
-            <div className="toolbar">
-                <button onClick={handleBlock} disabled={selectedUsers.length === 0}>
+            <div className="mb-3 d-flex justify-content-center gap-3">
+                <button className="btn btn-danger" onClick={handleBlock} disabled={selectedUsers.length === 0}>
                     Block
                 </button>
-                <button onClick={handleUnblock} disabled={selectedUsers.length === 0}>
+                <button className="btn btn-success" onClick={handleUnblock} disabled={selectedUsers.length === 0}>
                     Unblock
                 </button>
-                <button onClick={handleDeleteUsers} disabled={selectedUsers.length === 0}>
+                <button className="btn btn-warning" onClick={handleDeleteUsers} disabled={selectedUsers.length === 0}>
                     Delete
                 </button>
             </div>
@@ -190,7 +193,7 @@ const UsersTableWithActions = () => {
             {users.length === 0 ? (
                 <p>No users found.</p>
             ) : (
-                <table>
+                <table className="table table-striped">
                     <thead>
                         <tr>
                             <th>
@@ -219,7 +222,7 @@ const UsersTableWithActions = () => {
                                 <td>{user.email || 'N/A'}</td>
                                 <td>{formatDateTime(user.registration_date)}</td>
                                 <td>{formatDateTime(user.last_login)}</td>
-                                <td>{user.status || 'N/A'}</td>
+                                <td>{user.status === 'blocked' ? 'Blocked' : user.status === 'active' ? 'Active' : 'N/A'}</td>
                             </tr>
                         ))}
                     </tbody>

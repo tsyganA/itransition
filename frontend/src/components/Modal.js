@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import './Modal.css'; // Стили для модального окна
+// import './Modal.css'; // Стили для модального окна
 
 const Modal = ({ isOpen, onClose, children }) => {
     useEffect(() => {
@@ -16,10 +16,10 @@ const Modal = ({ isOpen, onClose, children }) => {
 
     return (
         <div className="modal">
-            <div className="modal-content">
-                <button onClick={onClose}>Close</button>
-                {children}
-            </div>
+            {/* <div className="modal-content"> */}
+            {/* <button onClick={onClose}>Close</button> */}
+            {children}
+            {/* </div> */}
         </div>
     );
 };

@@ -1,15 +1,15 @@
-// src/components/RegisterButton.js
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+// // src/components/RegisterButton.js
+// import React from 'react';
+// import { useNavigate } from 'react-router-dom';
 
-const RegisterButton = () => {
-    const navigate = useNavigate();
+// const RegisterButton = () => {
+//     const navigate = useNavigate();
 
-    const handleClick = () => {
-        navigate('/register');
-    };
+//     const handleClick = () => {
+//         navigate('/register');
+//     };
 
-    return <button onClick={handleClick}>Register</button>;
-};
+//     return <button onClick={handleClick}>Register</button>;
+// };
 
-export default RegisterButton;
+// export default RegisterButton;
