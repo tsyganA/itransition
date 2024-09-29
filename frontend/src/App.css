@@ -1,0 +1,33 @@
+/* src/App.css */
+.btn {
+    padding: 0;
+    border: none;
+    /* border-radius: 5px; */
+    color: white;
+    cursor: pointer;
+    font-size: 24px;
+    width: 5em;
+    /* height: 3em; */
+}
+
+.btn-primary {
+    background-color: #007bff;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+}
+
+.mt-10 {
+    margin-top: 15rem; /* Отступ сверху в 10 ремов */
+}
+
+.custom-modal {
+    /* position: absolute;
+    top: 20%;
+    left: 35%; */
+    display: flex;
+    justify-content: center; /* Центрирование по горизонтали */
+    margin-top: 10em;
+    /* align-items: center;  */
+}
