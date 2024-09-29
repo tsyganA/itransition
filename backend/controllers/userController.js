@@ -16,11 +16,10 @@ const registerUser = async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const [result] = await db.query('INSERT INTO users (name, email, password, registration_date, status) VALUES (?, ?, ?, NOW(), "active")', [
-            name,
-            email,
-            hashedPassword,
-        ]);
+        const [result] = await db.query(
+            'INSERT INTO users (name, email, password, registration_date, last_login, status) VALUES (?, ?, ?, NOW(), NULL, "active")',
+            [name, email, hashedPassword]
+        );
 
         res.status(201).json({ message: 'User registered successfully', userId: result.insertId, email });
     } catch (err) {

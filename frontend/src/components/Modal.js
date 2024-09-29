@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-// import './Modal.css'; // Стили для модального окна
 
 const Modal = ({ isOpen, onClose, children }) => {
     useEffect(() => {

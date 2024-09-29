@@ -15,9 +15,6 @@ const UsersTableWithActions = () => {
         const token = localStorage.getItem('token');
         const userId = localStorage.getItem('userId');
 
-        console.log('Token:', token); // Лог токена
-        console.log('UserId:', userId); // Лог userId
-
         if (!token || !userId) {
             setError('You must be logged in to view this page.');
             navigate('/login', { replace: true });
@@ -31,7 +28,6 @@ const UsersTableWithActions = () => {
     const fetchUsers = async token => {
         try {
             setLoading(true);
-            console.log('Fetching users...'); // Лог перед запросом
 
             const response = await axios.get('http://localhost:3000/api/users', {
                 headers: {
@@ -39,10 +35,8 @@ const UsersTableWithActions = () => {
                 },
             });
 
-            console.log('Users fetched:', response.data); // Лог ответа сервера
             setUsers(response.data);
         } catch (error) {
-            console.error('Error fetching users:', error); // Лог ошибки
             if (error.response && error.response.status === 401) {
                 localStorage.removeItem('token');
                 localStorage.removeItem('userId');
@@ -51,7 +45,6 @@ const UsersTableWithActions = () => {
                 setError(error.message);
             }
         } finally {
-            console.log('Fetching finished'); // Лог завершения запроса
             setLoading(false);
         }
     };
@@ -72,24 +65,14 @@ const UsersTableWithActions = () => {
         }
     };
 
-    const handleSelfAction = () => {
+    const handleDeleteUsers = async () => {
+        // Проверяем, если выбран текущий пользователь
         if (selectedUsers.includes(parseInt(currentUserId))) {
-            if (window.confirm('Вы собираетесь удалить или заблокировать свой собственный аккаунт. Вы уверены?')) {
-                alert('Ваш аккаунт был удалён или заблокирован. Пожалуйста, выполните повторный вход.');
-
-                // Удаляем токен и userId из localStorage
-                localStorage.removeItem('token');
-                localStorage.removeItem('userId');
-
-                // Обновляем страницу
-                window.location.reload(); // Обновление страницы
-            } else {
-                setSelectedUsers(selectedUsers.filter(id => id !== parseInt(currentUserId)));
+            if (!window.confirm('Вы уверены, что хотите удалить свой аккаунт?')) {
+                return; // Если отмена, прерываем процесс удаления
             }
         }
-    };
 
-    const handleDeleteUsers = async () => {
         try {
             const response = await axios.delete('http://localhost:3000/api/users/delete', {
                 data: { userId: selectedUsers },
@@ -99,9 +82,16 @@ const UsersTableWithActions = () => {
             });
 
             if (response.status === 200) {
-                handleSelfAction();
-                setUsers(users.filter(user => !selectedUsers.includes(user.id)));
-                setSelectedUsers([]);
+                // Проверяем, удаляется ли собственный аккаунт
+                if (selectedUsers.includes(parseInt(currentUserId))) {
+                    alert('Ваш аккаунт был удалён. Пожалуйста, выполните повторный вход.');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('userId');
+                    window.location.reload(); // Обновление страницы
+                } else {
+                    setUsers(users.filter(user => !selectedUsers.includes(user.id)));
+                    setSelectedUsers([]);
+                }
             }
         } catch (error) {
             if (error.response && error.response.status === 401) {
@@ -114,8 +104,16 @@ const UsersTableWithActions = () => {
         }
     };
 
-    const updateUsersStatus = async status => {
+    const updateUsersStatus = async (status, confirmMessage = '') => {
         const token = localStorage.getItem('token');
+
+        // Проверяем, если выбран текущий пользователь для блокировки
+        if (status === 'blocked' && selectedUsers.includes(parseInt(currentUserId))) {
+            if (!window.confirm('Вы уверены, что хотите заблокировать свой аккаунт?')) {
+                return; // Если отмена, прерываем процесс блокировки
+            }
+        }
+
         try {
             const response = await axios.post(
                 'http://localhost:3000/api/users/update',
@@ -128,9 +126,16 @@ const UsersTableWithActions = () => {
             );
 
             if (response.status === 200) {
-                handleSelfAction();
-                setUsers(prevUsers => prevUsers.map(user => (selectedUsers.includes(user.id) ? { ...user, status } : user)));
-                setSelectedUsers([]);
+                // Проверяем только для блокировки, нужно ли показывать предупреждение о собственном аккаунте
+                if (status === 'blocked' && selectedUsers.includes(parseInt(currentUserId))) {
+                    alert('Ваш аккаунт был заблокирован. Пожалуйста, выполните повторный вход.');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('userId');
+                    window.location.reload(); // Обновление страницы
+                } else {
+                    setUsers(prevUsers => prevUsers.map(user => (selectedUsers.includes(user.id) ? { ...user, status } : user)));
+                    setSelectedUsers([]);
+                }
             }
         } catch (error) {
             if (error.response && error.response.status === 401) {
@@ -144,15 +149,16 @@ const UsersTableWithActions = () => {
     };
 
     const handleBlock = () => {
+        // Блокировка с подтверждением только если текущий пользователь выбран
         updateUsersStatus('blocked');
     };
 
     const handleUnblock = () => {
-        updateUsersStatus('active');
+        updateUsersStatus('active'); // Подтверждения нет, потому что unblock не требует подтверждения
     };
 
     const formatDateTime = dateString => {
-        if (!dateString) return 'N/A';
+        if (!dateString) return 'Did not enter';
         const date = new Date(dateString);
         const datePart = date.toLocaleDateString(); // Получаем дату
         const timePart = date.toLocaleTimeString(); // Получаем время
@@ -176,17 +182,28 @@ const UsersTableWithActions = () => {
 
     return (
         <div className="container mt-4" style={{ maxWidth: '800px' }}>
-            <h2 class="text-center">Users List</h2>
+            <h2 className="text-center">Users List</h2>
 
             <div className="mb-3 d-flex justify-content-center gap-3">
                 <button className="btn btn-danger" onClick={handleBlock} disabled={selectedUsers.length === 0}>
                     Block
                 </button>
-                <button className="btn btn-success" onClick={handleUnblock} disabled={selectedUsers.length === 0}>
-                    Unblock
+
+                <button
+                    className="btn btn-success"
+                    onClick={handleUnblock}
+                    disabled={selectedUsers.length === 0}
+                    style={{ backgroundColor: 'transparent', border: 'none', outline: 'none', boxShadow: 'none' }}
+                >
+                    <i className="bi bi-unlock-fill" style={{ fontSize: '3rem', color: 'green' }}></i>
                 </button>
-                <button className="btn btn-warning" onClick={handleDeleteUsers} disabled={selectedUsers.length === 0}>
-                    Delete
+                <button
+                    className="btn btn-warning"
+                    onClick={handleDeleteUsers}
+                    disabled={selectedUsers.length === 0}
+                    style={{ backgroundColor: 'transparent', border: 'none', outline: 'none', boxShadow: 'none' }}
+                >
+                    <i className="bi bi-trash-fill" style={{ fontSize: '3rem', color: 'blue' }}></i>
                 </button>
             </div>
 
