@@ -25,3 +25,8 @@ dist-ssr
 *.sw?
 
 backend/firebaseServiceAccountKey.json
+
+.firebase
+
+# GitHub specific files (if applicable)
+# .github/*
