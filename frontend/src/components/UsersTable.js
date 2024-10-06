@@ -1,4 +1,6 @@
+// usersTable.js
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
 const UsersTable = () => {
     const [users, setUsers] = useState([]);
@@ -12,19 +14,18 @@ const UsersTable = () => {
             return;
         }
 
-        fetch('/api/users', {
-            headers: {
-                Authorization: `Bearer ${token}`, // Добавлен префикс Bearer для токена
-            },
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to fetch users');
-                }
-                return response.json();
+        axios
+            .get('/api/users', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
             })
-            .then(data => setUsers(data))
-            .catch(error => setError(error.message));
+            .then(response => {
+                setUsers(response.data);
+            })
+            .catch(error => {
+                setError(error.message);
+            });
     }, []);
 
     if (error) {

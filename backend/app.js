@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const userRoutes = require('./routes/userRoutes');
+const adminRoutes = require('./routes/adminRoutes'); // Импорт маршрутов для администрирования
 const { createUserTable } = require('./models/userModel');
 require('dotenv').config();
 
@@ -12,6 +13,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Создание таблицы пользователей
 (async () => {
     try {
         await createUserTable();
@@ -21,8 +23,9 @@ app.use(express.json());
     }
 })();
 
-// Открытый маршрут
+// Открытые маршруты
 app.use('/api', userRoutes);
+app.use('/api/admin', adminRoutes); // Подключение маршрутов для администрирования
 
 // Обработка ошибок 404
 app.use((req, res) => {

@@ -1,5 +1,6 @@
+// userRoutes.js
 const express = require('express');
-const { registerUser, loginUser, getUsers, updateUsersStatus, deleteUsers } = require('../controllers/userController'); // Добавьте deleteUsers
+const { registerUser, loginUser } = require('../controllers/userController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const { check, validationResult } = require('express-validator');
 const router = express.Router();
@@ -10,8 +11,7 @@ router.post(
     [
         check('name', 'Name is required').not().isEmpty(),
         check('email', 'Please include a valid email').isEmail(),
-        // Удаляем проверку длины пароля
-        // check('password', 'Password must be at least 6 characters').isLength({ min: 6 }),
+        check('password', 'Password is required').exists(),
     ],
     (req, res, next) => {
         const errors = validationResult(req);
@@ -36,14 +36,5 @@ router.post(
     },
     loginUser
 );
-
-// Получение списка пользователей
-router.get('/users', authenticateToken, getUsers);
-
-// Обновление статуса пользователей
-router.post('/users/update', authenticateToken, updateUsersStatus);
-
-// Удаление пользователей
-router.delete('/users/delete', authenticateToken, deleteUsers); // <-- Добавляем маршрут удаления пользователей
 
 module.exports = router;

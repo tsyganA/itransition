@@ -1,29 +1,38 @@
 {
-  "name": "fullstack-project",
-  "version": "1.0.0",
-  "description": "Fullstack project with React and Node.js",
-  "private": true,
-  "scripts": {
-    "install-all": "npm install --prefix backend && npm install --prefix frontend",
-    "start": "concurrently \"npm run dev --prefix backend\" \"npm start --prefix frontend\"",
-    "build": "npm run build --prefix frontend",
-    "dev": "concurrently \"npm run dev --prefix backend\" \"npm start --prefix frontend\""
-  },
-  "devDependencies": {
-    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
-    "concurrently": "^6.5.1",
-    "nodemon": "^3.1.4"
-  },
-  "dependencies": {
-    "axios": "^1.7.7",
-    "bootstrap": "^5.3.3",
-    "dotenv": "^16.4.5",
-    "express-validator": "^7.2.0",
-    "jwt-decode": "^4.0.0",
-    "mysql": "^2.18.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2",
-    "react-scripts": "^5.0.1"
-  }
+    "name": "fullstack-project",
+    "version": "1.0.0",
+    "description": "Fullstack project with React and Node.js",
+    "private": true,
+    "scripts": {
+        "install-all": "npm install --prefix backend && npm install --prefix frontend",
+        "start": "concurrently \"npm run dev --prefix backend\" \"npm start --prefix frontend\"",
+        "build": "npm run build --prefix frontend",
+        "dev": "concurrently \"npm run dev --prefix backend\" \"npm start --prefix frontend\"",
+        "firebase-emulators": "concurrently \"npm run start:firebase\" \"npm run start:server\" \"npm run dev\"",
+        "start:firebase": "firebase emulators:start",
+        "start:server": "node server.js",
+        "lint": "eslint ."
+    },
+    "devDependencies": {
+        "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+        "concurrently": "^6.5.1",
+        "nodemon": "^3.1.4"
+    },
+    "dependencies": {
+        "axios": "^1.7.7",
+        "bootstrap": "^5.3.3",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "express": "^4.21.0",
+        "express-validator": "^7.2.0",
+        "firebase": "^10.14.0",
+        "firebase-admin": "^12.6.0",
+        "firebase-functions": "^6.0.1",
+        "jwt-decode": "^4.0.0",
+        "mysql": "^2.18.1",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "react-router-dom": "^6.26.2",
+        "react-scripts": "^5.0.1"
+    }
 }

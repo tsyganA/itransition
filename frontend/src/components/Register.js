@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from './firebaseClient'; // Импортируем auth из файла firebase.js
+import { getDatabase, ref, set } from 'firebase/database'; // Импорт для работы с Realtime Database
 
 const Register = ({ onClose }) => {
     const [name, setName] = useState('');
@@ -9,34 +12,30 @@ const Register = ({ onClose }) => {
 
     const handleSubmit = async e => {
         e.preventDefault();
-
         setError(null);
 
         try {
-            const response = await fetch('http://localhost:3000/api/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ name, email, password }), // Отправляем введенные данные
+            // Создаем пользователя через Firebase Authentication
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            // Обновляем профиль пользователя с именем
+            await updateProfile(user, { displayName: name });
+
+            // Сохраняем пользователя в Realtime Database
+            const db = getDatabase();
+            const userRef = ref(db, `users/${user.uid}`);
+            await set(userRef, {
+                displayName: user.displayName,
+                email: user.email,
+                creationTime: user.metadata.creationTime,
+                lastSignInTime: user.metadata.lastSignInTime,
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                // Сохраняем token и userId в localStorage, если регистрация успешна
-                if (data.token && data.userId) {
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('userId', data.userId);
-                }
-
-                setSuccess(true); // Отображаем сообщение об успешной регистрации
-                setTimeout(onClose, 2000); // Закрываем модальное окно через 2 секунды
-            } else {
-                setError(data.error || 'Something went wrong');
-            }
-        } catch (err) {
-            setError('Failed to register. Please try again.');
+            setSuccess(true);
+            setTimeout(onClose, 2000); // Закрыть модальное окно через 2 секунды
+        } catch (error) {
+            setError(error.message || 'Something went wrong');
         }
     };
 
@@ -88,6 +87,7 @@ const Register = ({ onClose }) => {
                                         className="form-control"
                                         value={password}
                                         onChange={e => setPassword(e.target.value)}
+                                        required
                                     />
                                 </div>
                                 {error && <p className="text-danger">{error}</p>}

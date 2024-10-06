@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { getDatabase, ref, onValue } from 'firebase/database';
 
 const UsersTableWithActions = () => {
     const [users, setUsers] = useState([]);
@@ -22,29 +23,30 @@ const UsersTableWithActions = () => {
         }
 
         setCurrentUserId(userId); // Устанавливаем userId в state
-        fetchUsers(token);
+        fetchUsers();
     }, [navigate]);
 
-    const fetchUsers = async token => {
+    const fetchUsers = async () => {
         try {
             setLoading(true);
 
-            const response = await axios.get('http://localhost:3000/api/users', {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
+            const db = getDatabase();
+            const usersRef = ref(db, 'users');
+            onValue(usersRef, snapshot => {
+                const usersData = snapshot.val();
+                const usersList = Object.keys(usersData).map(key => ({
+                    id: key,
+                    displayName: usersData[key].displayName || 'N/A', // Используем displayName, если оно есть
+                    email: usersData[key].email,
+                    registration_date: usersData[key].creationTime,
+                    last_login: usersData[key].lastSignInTime,
+                    status: usersData[key].status || 'active', // default status
+                }));
+                setUsers(usersList);
+                setLoading(false);
             });
-
-            setUsers(response.data);
         } catch (error) {
-            if (error.response && error.response.status === 401) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('userId');
-                navigate('/login');
-            } else {
-                setError(error.message);
-            }
-        } finally {
+            setError(error.message || 'Something went wrong');
             setLoading(false);
         }
     };
@@ -66,10 +68,9 @@ const UsersTableWithActions = () => {
     };
 
     const handleDeleteUsers = async () => {
-        // Проверяем, если выбран текущий пользователь
-        if (selectedUsers.includes(parseInt(currentUserId))) {
-            if (!window.confirm('Вы уверены, что хотите удалить свой аккаунт?')) {
-                return; // Если отмена, прерываем процесс удаления
+        if (selectedUsers.includes(currentUserId)) {
+            if (!window.confirm('Are you sure you want to delete your own account?')) {
+                return;
             }
         }
 
@@ -82,12 +83,11 @@ const UsersTableWithActions = () => {
             });
 
             if (response.status === 200) {
-                // Проверяем, удаляется ли собственный аккаунт
-                if (selectedUsers.includes(parseInt(currentUserId))) {
-                    alert('Ваш аккаунт был удалён. Пожалуйста, выполните повторный вход.');
+                if (selectedUsers.includes(currentUserId)) {
+                    alert('Your account has been deleted. Please log in again.');
                     localStorage.removeItem('token');
                     localStorage.removeItem('userId');
-                    window.location.reload(); // Обновление страницы
+                    window.location.reload();
                 } else {
                     setUsers(users.filter(user => !selectedUsers.includes(user.id)));
                     setSelectedUsers([]);
@@ -104,13 +104,12 @@ const UsersTableWithActions = () => {
         }
     };
 
-    const updateUsersStatus = async (status, confirmMessage = '') => {
+    const updateUsersStatus = async status => {
         const token = localStorage.getItem('token');
 
-        // Проверяем, если выбран текущий пользователь для блокировки
-        if (status === 'blocked' && selectedUsers.includes(parseInt(currentUserId))) {
-            if (!window.confirm('Вы уверены, что хотите заблокировать свой аккаунт?')) {
-                return; // Если отмена, прерываем процесс блокировки
+        if (status === 'blocked' && selectedUsers.includes(currentUserId)) {
+            if (!window.confirm('Are you sure you want to block your own account?')) {
+                return;
             }
         }
 
@@ -126,12 +125,11 @@ const UsersTableWithActions = () => {
             );
 
             if (response.status === 200) {
-                // Проверяем только для блокировки, нужно ли показывать предупреждение о собственном аккаунте
-                if (status === 'blocked' && selectedUsers.includes(parseInt(currentUserId))) {
-                    alert('Ваш аккаунт был заблокирован. Пожалуйста, выполните повторный вход.');
+                if (status === 'blocked' && selectedUsers.includes(currentUserId)) {
+                    alert('Your account has been blocked. Please log in again.');
                     localStorage.removeItem('token');
                     localStorage.removeItem('userId');
-                    window.location.reload(); // Обновление страницы
+                    window.location.reload();
                 } else {
                     setUsers(prevUsers => prevUsers.map(user => (selectedUsers.includes(user.id) ? { ...user, status } : user)));
                     setSelectedUsers([]);
@@ -149,20 +147,19 @@ const UsersTableWithActions = () => {
     };
 
     const handleBlock = () => {
-        // Блокировка с подтверждением только если текущий пользователь выбран
         updateUsersStatus('blocked');
     };
 
     const handleUnblock = () => {
-        updateUsersStatus('active'); // Подтверждения нет, потому что unblock не требует подтверждения
+        updateUsersStatus('active');
     };
 
     const formatDateTime = dateString => {
         if (!dateString) return 'Did not enter';
         const date = new Date(dateString);
-        const datePart = date.toLocaleDateString(); // Получаем дату
-        const timePart = date.toLocaleTimeString(); // Получаем время
-        return `${datePart} ${timePart}`; // Объединяем без запятой
+        const datePart = date.toLocaleDateString();
+        const timePart = date.toLocaleTimeString();
+        return `${datePart} ${timePart}`;
     };
 
     if (loading) {
@@ -221,7 +218,7 @@ const UsersTableWithActions = () => {
                                 />
                             </th>
                             <th>ID</th>
-                            <th>Name</th>
+                            <th>Name (Identifier)</th>
                             <th>Email</th>
                             <th>Registration Date</th>
                             <th>Last Login</th>
@@ -235,8 +232,8 @@ const UsersTableWithActions = () => {
                                     <input type="checkbox" checked={selectedUsers.includes(user.id)} onChange={() => handleSelectUser(user.id)} />
                                 </td>
                                 <td>{user.id}</td>
-                                <td>{user.name || 'N/A'}</td>
-                                <td>{user.email || 'N/A'}</td>
+                                <td>{user.displayName}</td>
+                                <td>{user.email}</td>
                                 <td>{formatDateTime(user.registration_date)}</td>
                                 <td>{formatDateTime(user.last_login)}</td>
                                 <td>{user.status === 'blocked' ? 'Blocked' : user.status === 'active' ? 'Active' : 'N/A'}</td>

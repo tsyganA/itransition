@@ -1,0 +1,18 @@
+{
+    "users": {
+        "user1": {
+            "uid": "1",
+            "email": "user1@example.com",
+            "displayName": "User One",
+            "creationTime": "2024-01-01T12:00:00Z",
+            "lastSignInTime": "2024-10-02T10:00:00Z"
+        },
+        "user2": {
+            "uid": "2",
+            "email": "user2@example.com",
+            "displayName": "User Two",
+            "creationTime": "2024-02-01T12:00:00Z",
+            "lastSignInTime": "2024-10-02T11:00:00Z"
+        }
+    }
+}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { jwtDecode } from 'jwt-decode'; // Импортируем jwt-decode для работы с токеном
+import { signInWithEmailAndPassword } from 'firebase/auth'; // Импортируем метод для входа через Firebase
+import { auth } from '../firebase'; // Импорт Firebase
 
 const Login = ({ onClose, onLogin }) => {
     const [email, setEmail] = useState('');
@@ -18,37 +19,22 @@ const Login = ({ onClose, onLogin }) => {
         e.preventDefault();
 
         try {
-            const response = await fetch('http://localhost:3000/api/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
+            // Используем Firebase Authentication для входа пользователя
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
 
-            if (!response.ok) {
-                throw new Error('Login failed. Please check your credentials.');
-            }
+            console.log('Logged in user:', user);
 
-            const data = await response.json();
+            // Сохраняем токен и UID пользователя
+            const token = await user.getIdToken();
+            localStorage.setItem('token', token);
+            localStorage.setItem('userId', user.uid);
 
-            if (data.token) {
-                const decodedToken = jwtDecode(data.token);
-                const userId = decodedToken.userId;
-
-                console.log('Decoded Token:', decodedToken);
-                console.log('UserId:', userId);
-
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('userId', userId);
-
-                onLogin(data.token);
-                onClose();
-            } else {
-                throw new Error('Login failed. No token received.');
-            }
-        } catch (err) {
-            setError(err.message);
+            // Вызываем callback для обновления состояния аутентификации
+            onLogin(token);
+            onClose();
+        } catch (error) {
+            setError('Login failed. Please check your credentials.');
         }
     };
 
