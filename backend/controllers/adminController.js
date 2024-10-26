@@ -1,15 +1,10 @@
-// adminController.js
-const admin = require('firebase-admin');
-
-// Инициализация Admin SDK
-admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-});
+// Импортируем инициализированные сервисы Firebase Admin SDK из firebaseAdmin.js
+const { auth } = require('../firebaseAdmin');
 
 // Получение всех пользователей
 const listAllUsers = async (req, res) => {
     try {
-        const userRecords = await admin.auth().listUsers();
+        const userRecords = await auth.listUsers();
         const users = userRecords.users.map(user => ({
             uid: user.uid,
             email: user.email,

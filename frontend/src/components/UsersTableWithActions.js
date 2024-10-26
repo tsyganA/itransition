@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { getDatabase, ref, onValue } from 'firebase/database';
+import { getDatabase, ref, onValue, remove, set } from 'firebase/database';
 
 const UsersTableWithActions = () => {
     const [users, setUsers] = useState([]);
@@ -22,7 +22,7 @@ const UsersTableWithActions = () => {
             return;
         }
 
-        setCurrentUserId(userId); // Устанавливаем userId в state
+        setCurrentUserId(userId);
         fetchUsers();
     }, [navigate]);
 
@@ -36,11 +36,11 @@ const UsersTableWithActions = () => {
                 const usersData = snapshot.val();
                 const usersList = Object.keys(usersData).map(key => ({
                     id: key,
-                    displayName: usersData[key].displayName || 'N/A', // Используем displayName, если оно есть
+                    displayName: usersData[key].displayName || 'N/A',
                     email: usersData[key].email,
                     registration_date: usersData[key].creationTime,
                     last_login: usersData[key].lastSignInTime,
-                    status: usersData[key].status || 'active', // default status
+                    status: usersData[key].status || 'active',
                 }));
                 setUsers(usersList);
                 setLoading(false);
@@ -53,9 +53,9 @@ const UsersTableWithActions = () => {
 
     const handleSelectAll = () => {
         if (selectedUsers.length === users.length) {
-            setSelectedUsers([]); // Снять выделение
+            setSelectedUsers([]);
         } else {
-            setSelectedUsers(users.map(user => user.id)); // Выделить всех
+            setSelectedUsers(users.map(user => user.id));
         }
     };
 
@@ -75,83 +75,71 @@ const UsersTableWithActions = () => {
         }
 
         try {
-            const response = await axios.delete('http://localhost:3000/api/users/delete', {
-                data: { userId: selectedUsers },
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-            });
-
-            if (response.status === 200) {
-                if (selectedUsers.includes(currentUserId)) {
-                    alert('Your account has been deleted. Please log in again.');
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('userId');
-                    window.location.reload();
-                } else {
-                    setUsers(users.filter(user => !selectedUsers.includes(user.id)));
-                    setSelectedUsers([]);
+            for (const userId of selectedUsers) {
+                const response = await axios.delete(`http://localhost:3010/api/deleteUser/${userId}`);
+                if (response.status !== 204) {
+                    throw new Error('Failed to delete user from Authentication');
                 }
             }
-        } catch (error) {
-            if (error.response && error.response.status === 401) {
+
+            const db = getDatabase();
+
+            selectedUsers.forEach(async userId => {
+                const userRef = ref(db, `users/${userId}`);
+                await remove(userRef);
+            });
+
+            if (selectedUsers.includes(currentUserId)) {
+                alert('Your account has been deleted. Please log in again.');
                 localStorage.removeItem('token');
                 localStorage.removeItem('userId');
-                navigate('/login');
+                window.location.reload();
             } else {
-                setError(error.message);
+                setUsers(users.filter(user => !selectedUsers.includes(user.id)));
+                setSelectedUsers([]);
             }
+        } catch (error) {
+            setError(error.message);
         }
     };
 
-    const updateUsersStatus = async status => {
-        const token = localStorage.getItem('token');
-
-        if (status === 'blocked' && selectedUsers.includes(currentUserId)) {
+    const updateUsersStatus = async (endpoint, statusMessage) => {
+        if (statusMessage === 'blocked' && selectedUsers.includes(currentUserId)) {
             if (!window.confirm('Are you sure you want to block your own account?')) {
                 return;
             }
         }
 
         try {
-            const response = await axios.post(
-                'http://localhost:3000/api/users/update',
-                { userId: selectedUsers, status },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
+            const db = getDatabase();
 
-            if (response.status === 200) {
-                if (status === 'blocked' && selectedUsers.includes(currentUserId)) {
-                    alert('Your account has been blocked. Please log in again.');
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('userId');
-                    window.location.reload();
-                } else {
-                    setUsers(prevUsers => prevUsers.map(user => (selectedUsers.includes(user.id) ? { ...user, status } : user)));
-                    setSelectedUsers([]);
-                }
+            for (const userId of selectedUsers) {
+                await axios.post(`http://localhost:3010/api/${endpoint}`, { uid: userId });
+
+                const userRef = ref(db, `users/${userId}/status`);
+                await set(userRef, statusMessage);
             }
-        } catch (error) {
-            if (error.response && error.response.status === 401) {
+
+            setUsers(prevUsers => prevUsers.map(user => (selectedUsers.includes(user.id) ? { ...user, status: statusMessage } : user)));
+            setSelectedUsers([]);
+
+            if (statusMessage === 'blocked' && selectedUsers.includes(currentUserId)) {
+                alert('Your account has been blocked. Please log in again.');
                 localStorage.removeItem('token');
                 localStorage.removeItem('userId');
-                navigate('/login');
-            } else {
-                setError(error.message);
+                window.location.reload();
             }
+        } catch (error) {
+            setError(error.message);
         }
     };
 
     const handleBlock = () => {
-        updateUsersStatus('blocked');
+        updateUsersStatus('blockUser', 'blocked');
     };
 
     const handleUnblock = () => {
-        updateUsersStatus('active');
+        updateUsersStatus('unblockUser', 'active');
     };
 
     const formatDateTime = dateString => {

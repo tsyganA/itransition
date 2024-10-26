@@ -1,29 +1,37 @@
 const admin = require('firebase-admin');
 
 // Подключаем ключ сервисного аккаунта
-const serviceAccount = require('../firebaseServiceAccountKey.json');
+const serviceAccount = require('../backend/firebaseServiceAccountKey.json');
 
-// Инициализация Firebase Admin SDK
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: 'http://localhost:9000', // URL эмулятора Realtime Database
-});
+// Проверяем, было ли уже инициализировано приложение Firebase
+if (!admin.apps.length) {
+    // Инициализация Firebase Admin SDK
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: 'https://chat-react-7a32a-default-rtdb.firebaseio.com', // URL Realtime Database
+    });
+}
 
 // Инициализация Realtime Database и Firestore
 const dbRealtime = admin.database(); // Realtime Database
 const dbFirestore = admin.firestore(); // Firestore
 const auth = admin.auth(); // Firebase Authentication
 
-// Проверка наличия эмуляторов
-if (process.env.FIREBASE_EMULATOR) {
-    // Подключение к эмуляторам, если они запущены
+// Подключение к эмуляторам, если запущены и настроены
+if (process.env.FIREBASE_EMULATOR === 'true') {
     console.log('Connecting to Firebase Emulators...');
-    dbRealtime.useEmulator('localhost', 9000); // Эмулятор Realtime Database
+
+    // Realtime Database Emulator
+    dbRealtime.useEmulator('localhost', 9000);
+
+    // Firestore Emulator
     dbFirestore.settings({
-        host: 'localhost:8080', // Эмулятор Firestore
+        host: 'localhost:8080',
         ssl: false,
     });
-    auth.useEmulator('http://localhost:9099'); // Эмулятор Authentication
+
+    // Authentication Emulator
+    process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
 }
 
 module.exports = { dbRealtime, dbFirestore, auth };

@@ -2,49 +2,75 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 
-// Инициализация Firebase Admin SDK с использованием сервисного аккаунта
+// Инициализация Firebase Admin SDK
 admin.initializeApp({
     credential: admin.credential.cert(require('../backend/firebaseServiceAccountKey.json')),
-    databaseURL: 'https://chat-react-7a32a-default-rtdb.firebaseio.com',
+    databaseURL: 'https://chat-react-7a32a-default-rtdb.firebaseio.com', // Используется для RTDB (необязательно для Firestore)
 });
 
-// Проверка, используем ли мы эмуляторы для Auth и Realtime Database
-if (process.env.FIREBASE_AUTH_EMULATOR_HOST) {
-    console.log('Using Firebase Authentication emulator at:', process.env.FIREBASE_AUTH_EMULATOR_HOST);
+// Настройка Firestore для использования эмулятора
+if (process.env.FIRESTORE_EMULATOR_HOST) {
+    console.log('Using Firestore emulator at:', process.env.FIRESTORE_EMULATOR_HOST);
+    const firestore = admin.firestore();
+    firestore.settings({
+        host: process.env.FIRESTORE_EMULATOR_HOST,
+        ssl: false,
+    });
+} else {
+    console.log('Using Firestore production database');
 }
 
-if (process.env.FIREBASE_DATABASE_EMULATOR_HOST) {
-    console.log('Using Realtime Database emulator at:', process.env.FIREBASE_DATABASE_EMULATOR_HOST);
-    admin.database().useEmulator('localhost', 9000);
-}
-
-// Функция для обработки создания пользователя
+// Функция, вызываемая при создании пользователя в Firebase Authentication
 exports.onUserCreate = functions.auth.user().onCreate(async user => {
     try {
-        console.log('User data received:', user); // Отладочное сообщение
-
-        // Проверяем, если user определен
-        if (!user || !user.uid) {
-            throw new Error('User data is undefined or uid is missing');
-        }
+        console.log('User created:', user); // Логируем данные пользователя
 
         const { uid, email, displayName } = user;
 
-        // Сохранение данных пользователя в Realtime Database
+        // Сохраняем данные пользователя в Firestore (или эмуляторе)
         await admin
-            .database()
-            .ref(`/users/${uid}`)
+            .firestore()
+            .collection('users') // Коллекция 'users'
+            .doc(uid) // Документ с ID пользователя
             .set({
-                uid,
-                email,
-                displayName: displayName || '', // Проверяем, есть ли displayName
-                createdAt: admin.database.ServerValue.TIMESTAMP,
+                uid: uid,
+                email: email,
+                displayName: displayName || 'Unnamed User', // Используем "Unnamed User", если имя не указано
+                createdAt: admin.firestore.FieldValue.serverTimestamp(), // Время создания
             });
 
-        console.log(`User data saved in Realtime Database for user: ${uid}`);
+        console.log(`User ${uid} added to Firestore`);
     } catch (error) {
-        console.error('Error saving user data to Realtime Database:', error);
+        console.error('Error adding user to Firestore:', error);
     }
 });
 
-console.log('Firebase initialized in index.js');
+// HTTP-функция для регистрации пользователя и добавления его в Firestore
+exports.createUserAndAddToFirestore = functions.https.onRequest(async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).send('Email and password are required');
+    }
+
+    try {
+        const userRecord = await admin.auth().createUser({
+            email: email,
+            password: password,
+        });
+
+        console.log(`User created with UID: ${userRecord.uid}`);
+
+        // Добавление пользователя в Firestore
+        const userRef = admin.firestore().collection('users').doc(userRecord.uid);
+        await userRef.set({
+            email: userRecord.email,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        res.status(200).send(`User created successfully with UID: ${userRecord.uid}`);
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).send('Error creating user');
+    }
+});
