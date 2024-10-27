@@ -24,9 +24,10 @@ dist-ssr
 *.sln
 *.sw?
 
-backend/firebaseServiceAccountKey.json
+# backend/firebaseServiceAccountKey.json
 
 .firebase
 
 # GitHub specific files (if applicable)
 # .github/*
+.vercel
