@@ -12,6 +12,10 @@ const UsersTableWithActions = () => {
     const navigate = useNavigate();
     const [currentUserId, setCurrentUserId] = useState(null);
 
+    const serverUrl = 'https://itransition-six.vercel.app';
+    // const jwtToken =
+    //     '_vercel_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJVOVRHUUtxakl0QkszZ2owY3JnaHFVWXQiLCJpYXQiOjE3MzAwNjUyOTUsIm93bmVySWQiOiJ0ZWFtX2VYejhkbnlJVTZTcndRMkQ2bFNSeVR5SSIsImF1ZCI6Iml0cmFuc2l0aW9uLTQxbmg2ZjQycC1hbnRvbnMtcHJvamVjdHMtMjI5NGRhZjgudmVyY2VsLmFwcCIsInVzZXJuYW1lIjoidHN5Z2FuYSIsInN1YiI6InNzby1wcm90ZWN0aW9uIn0.AGAbfKRbOB4TOa35YWW-scytVHKj9w5xvdCeBtuCLFk';
+
     useEffect(() => {
         const token = localStorage.getItem('token');
         const userId = localStorage.getItem('userId');
@@ -76,14 +80,20 @@ const UsersTableWithActions = () => {
 
         try {
             for (const userId of selectedUsers) {
-                const response = await axios.delete(`http://localhost:3010/api/deleteUser/${userId}`);
+                const response = await axios.delete(
+                    `${serverUrl}/api/deleteUser/${userId}`
+                    // {
+                    // headers: { Cookie: `${jwtToken}` },
+                    // withCredentials: true,
+                    // }
+                );
+
                 if (response.status !== 204) {
                     throw new Error('Failed to delete user from Authentication');
                 }
             }
 
             const db = getDatabase();
-
             selectedUsers.forEach(async userId => {
                 const userRef = ref(db, `users/${userId}`);
                 await remove(userRef);
@@ -103,27 +113,37 @@ const UsersTableWithActions = () => {
         }
     };
 
-    const updateUsersStatus = async (endpoint, statusMessage) => {
-        if (statusMessage === 'blocked' && selectedUsers.includes(currentUserId)) {
+    const handleBlock = async () => {
+        if (selectedUsers.includes(currentUserId)) {
             if (!window.confirm('Are you sure you want to block your own account?')) {
                 return;
             }
         }
 
         try {
-            const db = getDatabase();
-
             for (const userId of selectedUsers) {
-                await axios.post(`http://localhost:3010/api/${endpoint}`, { uid: userId });
+                const response = await axios.post(
+                    `${serverUrl}/api/blockUser`,
+                    { uid: userId }
+                    // {
+                    //     headers: { Cookie: `${jwtToken}`, 'Content-Type': 'application/json' },
+                    //     withCredentials: true,
+                    // }
+                );
 
+                if (response.status !== 200) {
+                    throw new Error('Failed to block user');
+                }
+
+                const db = getDatabase();
                 const userRef = ref(db, `users/${userId}/status`);
-                await set(userRef, statusMessage);
+                await set(userRef, 'blocked');
             }
 
-            setUsers(prevUsers => prevUsers.map(user => (selectedUsers.includes(user.id) ? { ...user, status: statusMessage } : user)));
+            setUsers(prevUsers => prevUsers.map(user => (selectedUsers.includes(user.id) ? { ...user, status: 'blocked' } : user)));
             setSelectedUsers([]);
 
-            if (statusMessage === 'blocked' && selectedUsers.includes(currentUserId)) {
+            if (selectedUsers.includes(currentUserId)) {
                 alert('Your account has been blocked. Please log in again.');
                 localStorage.removeItem('token');
                 localStorage.removeItem('userId');
@@ -134,12 +154,32 @@ const UsersTableWithActions = () => {
         }
     };
 
-    const handleBlock = () => {
-        updateUsersStatus('blockUser', 'blocked');
-    };
+    const handleUnblock = async () => {
+        try {
+            for (const userId of selectedUsers) {
+                const response = await axios.post(
+                    `${serverUrl}/api/unblockUser`,
+                    { uid: userId }
+                    // {
+                    //     headers: { Cookie: `${jwtToken}`, 'Content-Type': 'application/json' },
+                    //     withCredentials: true,
+                    // }
+                );
 
-    const handleUnblock = () => {
-        updateUsersStatus('unblockUser', 'active');
+                if (response.status !== 200) {
+                    throw new Error('Failed to unblock user');
+                }
+
+                const db = getDatabase();
+                const userRef = ref(db, `users/${userId}/status`);
+                await set(userRef, 'active');
+            }
+
+            setUsers(prevUsers => prevUsers.map(user => (selectedUsers.includes(user.id) ? { ...user, status: 'active' } : user)));
+            setSelectedUsers([]);
+        } catch (error) {
+            setError(error.message);
+        }
     };
 
     const formatDateTime = dateString => {
@@ -178,7 +218,12 @@ const UsersTableWithActions = () => {
                     className="btn btn-success"
                     onClick={handleUnblock}
                     disabled={selectedUsers.length === 0}
-                    style={{ backgroundColor: 'transparent', border: 'none', outline: 'none', boxShadow: 'none' }}
+                    style={{
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        boxShadow: 'none',
+                    }}
                 >
                     <i className="bi bi-unlock-fill" style={{ fontSize: '3rem', color: 'green' }}></i>
                 </button>
@@ -186,7 +231,12 @@ const UsersTableWithActions = () => {
                     className="btn btn-warning"
                     onClick={handleDeleteUsers}
                     disabled={selectedUsers.length === 0}
-                    style={{ backgroundColor: 'transparent', border: 'none', outline: 'none', boxShadow: 'none' }}
+                    style={{
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        boxShadow: 'none',
+                    }}
                 >
                     <i className="bi bi-trash-fill" style={{ fontSize: '3rem', color: 'blue' }}></i>
                 </button>

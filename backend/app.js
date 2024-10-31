@@ -9,8 +9,14 @@ console.log('JWT_SECRET:', process.env.JWT_SECRET); // Проверка загр
 
 const app = express();
 
-// Используйте CORS middleware
-app.use(cors());
+// Настройка CORS для конкретного источника
+const corsOptions = {
+    origin: 'https://chat-react-7a32a.web.app', // Разрешаем только нужный источник
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Разрешенные методы
+    credentials: true, // Разрешаем передавать куки, если необходимо
+};
+
+app.use(cors(corsOptions)); // Использование CORS middleware
 app.use(express.json());
 
 // Создание таблицы пользователей
